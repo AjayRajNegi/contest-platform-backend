@@ -51,7 +51,13 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
-  User: 'User'
+  User: 'User',
+  Contests: 'Contests',
+  McqQuestions: 'McqQuestions',
+  DsaProblems: 'DsaProblems',
+  TestCases: 'TestCases',
+  McqSubmissions: 'McqSubmissions',
+  DsaSubmissions: 'DsaSubmissions'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -71,10 +77,98 @@ export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof
 
 
 export const UserScalarFieldEnum = {
-  id: 'id'
+  id: 'id',
+  name: 'name',
+  email: 'email',
+  password: 'password',
+  role: 'role',
+  created_at: 'created_at'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const ContestsScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  description: 'description',
+  creator_id: 'creator_id',
+  start_time: 'start_time',
+  end_time: 'end_time',
+  created_at: 'created_at'
+} as const
+
+export type ContestsScalarFieldEnum = (typeof ContestsScalarFieldEnum)[keyof typeof ContestsScalarFieldEnum]
+
+
+export const McqQuestionsScalarFieldEnum = {
+  id: 'id',
+  contest_id: 'contest_id',
+  question_text: 'question_text',
+  options: 'options',
+  correct_option_index: 'correct_option_index',
+  points: 'points',
+  created_at: 'created_at'
+} as const
+
+export type McqQuestionsScalarFieldEnum = (typeof McqQuestionsScalarFieldEnum)[keyof typeof McqQuestionsScalarFieldEnum]
+
+
+export const DsaProblemsScalarFieldEnum = {
+  id: 'id',
+  contest_id: 'contest_id',
+  title: 'title',
+  description: 'description',
+  tags: 'tags',
+  points: 'points',
+  time_limit: 'time_limit',
+  memory_limit: 'memory_limit',
+  created_at: 'created_at'
+} as const
+
+export type DsaProblemsScalarFieldEnum = (typeof DsaProblemsScalarFieldEnum)[keyof typeof DsaProblemsScalarFieldEnum]
+
+
+export const TestCasesScalarFieldEnum = {
+  id: 'id',
+  problem_id: 'problem_id',
+  input: 'input',
+  expected_output: 'expected_output',
+  is_hidden: 'is_hidden',
+  created_at: 'created_at'
+} as const
+
+export type TestCasesScalarFieldEnum = (typeof TestCasesScalarFieldEnum)[keyof typeof TestCasesScalarFieldEnum]
+
+
+export const McqSubmissionsScalarFieldEnum = {
+  id: 'id',
+  user_id: 'user_id',
+  question_id: 'question_id',
+  selected_option_index: 'selected_option_index',
+  is_correct: 'is_correct',
+  points_earned: 'points_earned',
+  submitted_at: 'submitted_at'
+} as const
+
+export type McqSubmissionsScalarFieldEnum = (typeof McqSubmissionsScalarFieldEnum)[keyof typeof McqSubmissionsScalarFieldEnum]
+
+
+export const DsaSubmissionsScalarFieldEnum = {
+  id: 'id',
+  user_id: 'user_id',
+  problem_id: 'problem_id',
+  code: 'code',
+  language: 'language',
+  status: 'status',
+  points_earned: 'points_earned',
+  test_cases_passed: 'test_cases_passed',
+  total_test_cases: 'total_test_cases',
+  execution_time: 'execution_time',
+  submitted_at: 'submitted_at'
+} as const
+
+export type DsaSubmissionsScalarFieldEnum = (typeof DsaSubmissionsScalarFieldEnum)[keyof typeof DsaSubmissionsScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -85,10 +179,34 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
 export const QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
 } as const
 
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 

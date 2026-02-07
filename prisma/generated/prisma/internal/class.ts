@@ -20,7 +20,7 @@ const config: runtime.GetPrismaClientConfig = {
   "clientVersion": "7.3.0",
   "engineVersion": "9d6ad21cbbceab97458517b147a6a09ff43aa735",
   "activeProvider": "postgresql",
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nmodel User {\n  id String @unique @default(uuid())\n\n  @@map(\"user\")\n}\n",
+  "inlineSchema": "generator client {\n  provider = \"prisma-client\"\n  output   = \"./generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nenum UserRole {\n  creator\n  contestee\n}\n\nmodel User {\n  id         Int       @id @default(autoincrement())\n  name       String\n  email      String    @unique\n  password   String\n  role       UserRole?\n  created_at DateTime  @default(now())\n\n  contests       Contests[]\n  mcqSubmissions McqSubmissions[]\n  dsaSubmissions DsaSubmissions[]\n\n  @@map(\"user\")\n}\n\nmodel Contests {\n  id          Int      @id @default(autoincrement())\n  title       String\n  description String\n  creator_id  Int\n  start_time  DateTime\n  end_time    DateTime\n  created_at  DateTime @default(now())\n\n  mcqs        McqQuestions[]\n  dsaProblems DsaProblems[]\n\n  creator User @relation(fields: [creator_id], references: [id])\n\n  @@map(\"contests\")\n}\n\nmodel McqQuestions {\n  id                   Int      @id @default(autoincrement())\n  contest_id           Int\n  question_text        String\n  options              Json\n  correct_option_index Int\n  points               Int      @default(1)\n  created_at           DateTime @default(now())\n\n  mcqSubmissions McqSubmissions[]\n  contest        Contests         @relation(fields: [contest_id], references: [id])\n\n  @@map(\"mcq_questions\")\n}\n\nmodel DsaProblems {\n  id           Int      @id @default(autoincrement())\n  contest_id   Int\n  title        String\n  description  String\n  tags         Json\n  points       Int      @default(100)\n  time_limit   Int      @default(2000)\n  memory_limit Int      @default(256)\n  created_at   DateTime @default(now())\n\n  testCases      TestCases[]\n  dsaSubmissions DsaSubmissions[]\n  contest        Contests         @relation(fields: [contest_id], references: [id])\n\n  @@map(\"dsa_problems\")\n}\n\nmodel TestCases {\n  id              Int      @id @default(autoincrement())\n  problem_id      Int\n  input           String\n  expected_output String\n  is_hidden       Boolean  @default(false)\n  created_at      DateTime @default(now())\n\n  problem DsaProblems @relation(fields: [problem_id], references: [id])\n\n  @@map(\"test_cases\")\n}\n\nmodel McqSubmissions {\n  id                    Int      @id @default(autoincrement())\n  user_id               Int\n  question_id           Int\n  selected_option_index Int\n  is_correct            Boolean\n  points_earned         Int      @default(0)\n  submitted_at          DateTime @default(now())\n\n  user     User         @relation(fields: [user_id], references: [id])\n  question McqQuestions @relation(fields: [question_id], references: [id])\n\n  @@unique([user_id, question_id])\n  @@map(\"mcq_submissions\")\n}\n\nmodel DsaSubmissions {\n  id                Int      @id @default(autoincrement())\n  user_id           Int\n  problem_id        Int\n  code              String\n  language          String   @db.VarChar(50)\n  status            String   @db.VarChar(50)\n  points_earned     Int      @default(0)\n  test_cases_passed Int      @default(0)\n  total_test_cases  Int      @default(0)\n  execution_time    Int\n  submitted_at      DateTime @default(now())\n\n  user    User        @relation(fields: [user_id], references: [id])\n  problem DsaProblems @relation(fields: [problem_id], references: [id])\n\n  // Check for unique constraint\n  @@map(\"dsa_submission\")\n}\n",
   "runtimeDataModel": {
     "models": {},
     "enums": {},
@@ -28,7 +28,7 @@ const config: runtime.GetPrismaClientConfig = {
   }
 }
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":\"user\"}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"enum\",\"type\":\"UserRole\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"contests\",\"kind\":\"object\",\"type\":\"Contests\",\"relationName\":\"ContestsToUser\"},{\"name\":\"mcqSubmissions\",\"kind\":\"object\",\"type\":\"McqSubmissions\",\"relationName\":\"McqSubmissionsToUser\"},{\"name\":\"dsaSubmissions\",\"kind\":\"object\",\"type\":\"DsaSubmissions\",\"relationName\":\"DsaSubmissionsToUser\"}],\"dbName\":\"user\"},\"Contests\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"creator_id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"start_time\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"end_time\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"mcqs\",\"kind\":\"object\",\"type\":\"McqQuestions\",\"relationName\":\"ContestsToMcqQuestions\"},{\"name\":\"dsaProblems\",\"kind\":\"object\",\"type\":\"DsaProblems\",\"relationName\":\"ContestsToDsaProblems\"},{\"name\":\"creator\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"ContestsToUser\"}],\"dbName\":\"contests\"},\"McqQuestions\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"contest_id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"question_text\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"options\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"correct_option_index\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"points\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"mcqSubmissions\",\"kind\":\"object\",\"type\":\"McqSubmissions\",\"relationName\":\"McqQuestionsToMcqSubmissions\"},{\"name\":\"contest\",\"kind\":\"object\",\"type\":\"Contests\",\"relationName\":\"ContestsToMcqQuestions\"}],\"dbName\":\"mcq_questions\"},\"DsaProblems\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"contest_id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tags\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"points\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"time_limit\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"memory_limit\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"testCases\",\"kind\":\"object\",\"type\":\"TestCases\",\"relationName\":\"DsaProblemsToTestCases\"},{\"name\":\"dsaSubmissions\",\"kind\":\"object\",\"type\":\"DsaSubmissions\",\"relationName\":\"DsaProblemsToDsaSubmissions\"},{\"name\":\"contest\",\"kind\":\"object\",\"type\":\"Contests\",\"relationName\":\"ContestsToDsaProblems\"}],\"dbName\":\"dsa_problems\"},\"TestCases\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"problem_id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"input\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"expected_output\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"is_hidden\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"problem\",\"kind\":\"object\",\"type\":\"DsaProblems\",\"relationName\":\"DsaProblemsToTestCases\"}],\"dbName\":\"test_cases\"},\"McqSubmissions\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"user_id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"question_id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"selected_option_index\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"is_correct\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"points_earned\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"submitted_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"McqSubmissionsToUser\"},{\"name\":\"question\",\"kind\":\"object\",\"type\":\"McqQuestions\",\"relationName\":\"McqQuestionsToMcqSubmissions\"}],\"dbName\":\"mcq_submissions\"},\"DsaSubmissions\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"user_id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"problem_id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"code\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"language\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"points_earned\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"test_cases_passed\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"total_test_cases\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"execution_time\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"submitted_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"DsaSubmissionsToUser\"},{\"name\":\"problem\",\"kind\":\"object\",\"type\":\"DsaProblems\",\"relationName\":\"DsaProblemsToDsaSubmissions\"}],\"dbName\":\"dsa_submission\"}},\"enums\":{},\"types\":{}}")
 
 async function decodeBase64AsWasm(wasmBase64: string): Promise<WebAssembly.Module> {
   const { Buffer } = await import('node:buffer')
@@ -185,6 +185,66 @@ export interface PrismaClient<
     * ```
     */
   get user(): Prisma.UserDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.contests`: Exposes CRUD operations for the **Contests** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Contests
+    * const contests = await prisma.contests.findMany()
+    * ```
+    */
+  get contests(): Prisma.ContestsDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.mcqQuestions`: Exposes CRUD operations for the **McqQuestions** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more McqQuestions
+    * const mcqQuestions = await prisma.mcqQuestions.findMany()
+    * ```
+    */
+  get mcqQuestions(): Prisma.McqQuestionsDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.dsaProblems`: Exposes CRUD operations for the **DsaProblems** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more DsaProblems
+    * const dsaProblems = await prisma.dsaProblems.findMany()
+    * ```
+    */
+  get dsaProblems(): Prisma.DsaProblemsDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.testCases`: Exposes CRUD operations for the **TestCases** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more TestCases
+    * const testCases = await prisma.testCases.findMany()
+    * ```
+    */
+  get testCases(): Prisma.TestCasesDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.mcqSubmissions`: Exposes CRUD operations for the **McqSubmissions** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more McqSubmissions
+    * const mcqSubmissions = await prisma.mcqSubmissions.findMany()
+    * ```
+    */
+  get mcqSubmissions(): Prisma.McqSubmissionsDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.dsaSubmissions`: Exposes CRUD operations for the **DsaSubmissions** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more DsaSubmissions
+    * const dsaSubmissions = await prisma.dsaSubmissions.findMany()
+    * ```
+    */
+  get dsaSubmissions(): Prisma.DsaSubmissionsDelegate<ExtArgs, { omit: OmitOpts }>;
 }
 
 export function getPrismaClientClass(): PrismaClientConstructor {

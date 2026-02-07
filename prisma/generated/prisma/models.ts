@@ -9,4 +9,10 @@
  * 🟢 You can import this file directly.
  */
 export type * from './models/User.ts'
+export type * from './models/Contests.ts'
+export type * from './models/McqQuestions.ts'
+export type * from './models/DsaProblems.ts'
+export type * from './models/TestCases.ts'
+export type * from './models/McqSubmissions.ts'
+export type * from './models/DsaSubmissions.ts'
 export type * from './commonInputTypes.ts'

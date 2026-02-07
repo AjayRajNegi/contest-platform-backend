@@ -22,3 +22,33 @@ export * from './enums.ts';
  * 
  */
 export type User = Prisma.UserModel
+/**
+ * Model Contests
+ * 
+ */
+export type Contests = Prisma.ContestsModel
+/**
+ * Model McqQuestions
+ * 
+ */
+export type McqQuestions = Prisma.McqQuestionsModel
+/**
+ * Model DsaProblems
+ * 
+ */
+export type DsaProblems = Prisma.DsaProblemsModel
+/**
+ * Model TestCases
+ * 
+ */
+export type TestCases = Prisma.TestCasesModel
+/**
+ * Model McqSubmissions
+ * 
+ */
+export type McqSubmissions = Prisma.McqSubmissionsModel
+/**
+ * Model DsaSubmissions
+ * 
+ */
+export type DsaSubmissions = Prisma.DsaSubmissionsModel

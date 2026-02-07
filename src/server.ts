@@ -1,3 +1,4 @@
+import { initConfig } from "../lib";
 import createServer from "./app";
 
 const startServer = async () => {
