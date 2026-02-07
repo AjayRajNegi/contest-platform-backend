@@ -256,6 +256,7 @@ export type ContestsOrderByWithRelationInput = {
 
 export type ContestsWhereUniqueInput = Prisma.AtLeast<{
   id?: number
+  creator_id_title?: Prisma.ContestsCreator_idTitleCompoundUniqueInput
   AND?: Prisma.ContestsWhereInput | Prisma.ContestsWhereInput[]
   OR?: Prisma.ContestsWhereInput[]
   NOT?: Prisma.ContestsWhereInput | Prisma.ContestsWhereInput[]
@@ -268,7 +269,7 @@ export type ContestsWhereUniqueInput = Prisma.AtLeast<{
   mcqs?: Prisma.McqQuestionsListRelationFilter
   dsaProblems?: Prisma.DsaProblemsListRelationFilter
   creator?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-}, "id">
+}, "id" | "creator_id_title">
 
 export type ContestsOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -380,6 +381,11 @@ export type ContestsListRelationFilter = {
 
 export type ContestsOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
+}
+
+export type ContestsCreator_idTitleCompoundUniqueInput = {
+  creator_id: number
+  title: string
 }
 
 export type ContestsCountOrderByAggregateInput = {

@@ -67,7 +67,7 @@ const controller = {
 
       return res.status(200).json({
         success: true,
-        data: token,
+        data: { token },
         error: null,
       });
     } catch (error) {

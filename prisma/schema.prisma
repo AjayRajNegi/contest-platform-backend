@@ -42,6 +42,7 @@ model Contests {
   
   creator     User          @relation(fields: [creator_id], references: [id])
 
+  @@unique([creator_id, title])
   @@map("contests")
 }
 
