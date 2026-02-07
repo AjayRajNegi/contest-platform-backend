@@ -3,8 +3,8 @@ import express, {
   type Request,
   type Response,
 } from "express";
-
 import cors from "cors";
+import apiRoutes from "../routes/index";
 
 const isDev = true;
 const allowedOrigins = [process.env.FRONTEND_URL];
@@ -42,6 +42,8 @@ const createServer = (): express.Application => {
       message: "The server is running.",
     });
   });
+
+  app.use("/", apiRoutes);
 
   return app;
 };
