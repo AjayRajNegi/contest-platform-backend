@@ -80,5 +80,96 @@ const controller = {
       });
     }
   },
+  getContest: async (req: Request, res: Response) => {
+    try {
+      const contestId = req.params.contestId;
+
+      const parsedContestId = Number(contestId);
+      if (isNaN(parsedContestId)) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          error: "CONTEST_NOT_FOUND",
+        });
+      }
+
+      const contest = await prisma.contests.findFirst({
+        where: {
+          id: parsedContestId,
+        },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          start_time: true,
+          end_time: true,
+          creator_id: true,
+          mcqs: {
+            select: {
+              id: true,
+              question_text: true,
+              options: true,
+              points: true,
+            },
+          },
+          dsaProblems: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              tags: true,
+              points: true,
+              time_limit: true,
+              memory_limit: true,
+            },
+          },
+        },
+      });
+
+      if (!contest) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          error: "CONTEST_NOT_FOUND",
+        });
+      }
+
+      const data = {
+        id: contest.id,
+        title: contest.title,
+        description: contest.description,
+        startTime: contest.start_time,
+        endTime: contest.end_time,
+        creatorId: contest.creator_id,
+        mcqs: contest.mcqs.map((mcq) => ({
+          id: mcq.id,
+          questionText: mcq.question_text,
+          options: mcq.options,
+          points: mcq.points,
+        })),
+        dsaProblems: contest.dsaProblems.map((problem) => ({
+          id: problem.id,
+          title: problem.title,
+          description: problem.description,
+          tags: problem.tags,
+          points: problem.points,
+          timeLimit: problem.time_limit,
+          memoryLimit: problem.memory_limit,
+        })),
+      };
+
+      return res.status(200).json({
+        success: true,
+        data: data,
+        error: null,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        data: null,
+        error: "INTERNAL_SERVER_ERROR",
+      });
+    }
+  },
 };
 export default controller;
