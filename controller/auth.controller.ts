@@ -68,6 +68,7 @@ const controller = {
       return res.status(200).json({
         success: true,
         data: token,
+        error: null,
       });
     } catch (error) {
       console.log("Login error:", error);
@@ -120,7 +121,7 @@ const controller = {
         },
       });
 
-      return res.status(200).json({
+      return res.status(201).json({
         success: true,
         data: {
           id: newUser.id,

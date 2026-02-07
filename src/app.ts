@@ -43,7 +43,7 @@ const createServer = (): express.Application => {
     });
   });
 
-  app.use("/", apiRoutes);
+  app.use("/api", apiRoutes);
 
   return app;
 };
