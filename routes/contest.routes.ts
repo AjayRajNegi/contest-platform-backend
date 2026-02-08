@@ -12,5 +12,11 @@ router.post(
   contestController.createContest,
 );
 router.get("/:contestId", authMiddleware, contestController.getContest);
+router.post(
+  "/:contestId/mcq",
+  authMiddleware,
+  creatorMiddleware,
+  contestController.createMcq,
+);
 
 export default router;

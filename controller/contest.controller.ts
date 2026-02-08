@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import z from "zod";
+import z, { number } from "zod";
 import { prisma } from "../lib";
 
 const contestSchema = z.object({
@@ -8,6 +8,22 @@ const contestSchema = z.object({
   startTime: z.string().datetime({ message: "Invalid datetime format" }),
   endTime: z.string().datetime({ message: "Invalid datetime format" }),
 });
+const mcqQuestionSchema = z
+  .object({
+    questionText: z.string().min(2),
+    options: z.array(z.string()).min(1).max(4),
+    correctOptionIndex: z.number().int().nonnegative(),
+    points: z.number().positive(),
+  })
+  .refine(
+    (data) =>
+      data.correctOptionIndex >= 0 &&
+      data.correctOptionIndex < data.options.length,
+    {
+      message: "correctOptionIndex is out of bounds",
+      path: ["correctOptionIndex"],
+    },
+  );
 
 const controller = {
   createContest: async (req: Request, res: Response) => {
@@ -83,8 +99,8 @@ const controller = {
   getContest: async (req: Request, res: Response) => {
     try {
       const contestId = req.params.contestId;
-
       const parsedContestId = Number(contestId);
+
       if (isNaN(parsedContestId)) {
         return res.status(404).json({
           success: false,
@@ -159,6 +175,72 @@ const controller = {
       };
 
       return res.status(200).json({
+        success: true,
+        data: data,
+        error: null,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        data: null,
+        error: "INTERNAL_SERVER_ERROR",
+      });
+    }
+  },
+  createMcq: async (req: Request, res: Response) => {
+    try {
+      const contestId = req.params.contestId;
+      const parsedContestId = Number(contestId);
+      console.log(contestId);
+
+      if (isNaN(parsedContestId) || !contestId) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          error: "CONTEST_NOT_FOUND",
+        });
+      }
+
+      const validationResult = mcqQuestionSchema.safeParse(req.body);
+
+      if (!validationResult.success) {
+        return res.status(400).json({
+          success: false,
+          data: null,
+          error: "INVALID_REQUEST",
+        });
+      }
+
+      const { questionText, options, correctOptionIndex, points } =
+        validationResult.data;
+
+      const mcq = await prisma.mcqQuestions.create({
+        data: {
+          contest_id: parsedContestId,
+          question_text: questionText,
+          options: options,
+          correct_option_index: correctOptionIndex,
+          points: points,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!mcq) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          error: "CONTEST_NOT_FOUND",
+        });
+      }
+
+      const data = {
+        id: mcq.id,
+        contestId: contestId,
+      };
+
+      return res.status(201).json({
         success: true,
         data: data,
         error: null,
