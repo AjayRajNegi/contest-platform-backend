@@ -191,7 +191,6 @@ const controller = {
     try {
       const contestId = req.params.contestId;
       const parsedContestId = Number(contestId);
-      console.log(contestId);
 
       if (isNaN(parsedContestId) || !contestId) {
         return res.status(404).json({
@@ -214,37 +213,41 @@ const controller = {
       const { questionText, options, correctOptionIndex, points } =
         validationResult.data;
 
-      const mcq = await prisma.mcqQuestions.create({
-        data: {
-          contest_id: parsedContestId,
-          question_text: questionText,
-          options: options,
-          correct_option_index: correctOptionIndex,
-          points: points,
-        },
-        select: {
-          id: true,
-        },
-      });
-
-      if (!mcq) {
-        return res.status(404).json({
-          success: false,
-          data: null,
-          error: "CONTEST_NOT_FOUND",
+      try {
+        const mcq = await prisma.mcqQuestions.create({
+          data: {
+            contest_id: parsedContestId,
+            question_text: questionText,
+            options: options,
+            correct_option_index: correctOptionIndex,
+            points: points,
+          },
+          select: {
+            id: true,
+            contest_id: true,
+          },
         });
+
+        const data = {
+          id: mcq.id,
+          contestId: mcq.contest_id,
+        };
+
+        return res.status(201).json({
+          success: true,
+          data: data,
+          error: null,
+        });
+      } catch (error: any) {
+        if (error.code === "P2003") {
+          return res.status(404).json({
+            success: false,
+            data: null,
+            error: "CONTEST_NOT_FOUND",
+          });
+        }
+        throw error;
       }
-
-      const data = {
-        id: mcq.id,
-        contestId: contestId,
-      };
-
-      return res.status(201).json({
-        success: true,
-        data: data,
-        error: null,
-      });
     } catch (error) {
       return res.status(500).json({
         success: false,
