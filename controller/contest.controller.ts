@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import z from "zod";
+import z, { parse } from "zod";
 import { prisma } from "../lib";
 
 const contestSchema = z.object({
@@ -26,6 +26,23 @@ const mcqQuestionSchema = z
   );
 const mcqSubmissionSchema = z.object({
   selectedOptionIndex: z.number().int().nonnegative().min(1),
+});
+const dsaSubmissionSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().min(1),
+  tags: z.array(z.string().min(1)),
+  points: z.number().min(1),
+  timeLimit: z.number().min(1),
+  memoryLimit: z.number().min(1),
+  testCases: z
+    .array(
+      z.object({
+        input: z.string().min(1),
+        expectedOutput: z.string().min(1),
+        isHidden: z.boolean(),
+      }),
+    )
+    .min(1),
 });
 
 const controller = {
@@ -360,6 +377,90 @@ const controller = {
       }
     } catch (error) {
       console.error("Error in submitMcq:", error);
+      return res.status(500).json({
+        success: false,
+        data: null,
+        error: "INTERNAL_SERVER_ERROR",
+      });
+    }
+  },
+  createDSA: async (req: Request, res: Response) => {
+    try {
+      const contestId = req.params.contestId;
+      const parsedContestId = Number(contestId);
+
+      if (isNaN(parsedContestId)) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          error: "CONTEST_NOT_FOUND",
+        });
+      }
+
+      const validationResult = dsaSubmissionSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({
+          success: false,
+          data: null,
+          error: "INVALID_REQUEST",
+        });
+      }
+
+      const {
+        title,
+        description,
+        tags,
+        points,
+        timeLimit,
+        memoryLimit,
+        testCases,
+      } = validationResult.data;
+
+      const tests = testCases.map((tests) => ({
+        input: tests.input,
+        expected_output: tests.expectedOutput,
+        is_hidden: tests.isHidden,
+      }));
+
+      try {
+        const dsa = await prisma.dsaProblems.create({
+          data: {
+            title,
+            description,
+            contest_id: parsedContestId,
+            tags,
+            points,
+            time_limit: timeLimit,
+            memory_limit: memoryLimit,
+            testCases: {
+              create: tests,
+            },
+          },
+          select: {
+            id: true,
+            contest_id: true,
+          },
+        });
+
+        const data = { id: dsa.id, contestId: dsa.contest_id };
+
+        return res.status(201).json({
+          success: true,
+          data: data,
+          error: null,
+        });
+      } catch (error: any) {
+        if (error.code === "P2003") {
+          return res.status(404).json({
+            success: false,
+            data: null,
+            error: "CONTEST_NOT_FOUND",
+          });
+        }
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error in submitDSA:", error);
       return res.status(500).json({
         success: false,
         data: null,

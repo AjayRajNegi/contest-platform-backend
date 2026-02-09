@@ -25,5 +25,11 @@ router.post(
   contesteeMiddleware,
   contestController.submitMcq,
 );
+router.post(
+  "/:contestId/dsa",
+  authMiddleware,
+  creatorMiddleware,
+  contestController.createDSA,
+);
 
 export default router;
