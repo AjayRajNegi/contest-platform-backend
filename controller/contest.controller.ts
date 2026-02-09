@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import z, { number } from "zod";
+import z from "zod";
 import { prisma } from "../lib";
 
 const contestSchema = z.object({
@@ -24,6 +24,9 @@ const mcqQuestionSchema = z
       path: ["correctOptionIndex"],
     },
   );
+const mcqSubmissionSchema = z.object({
+  selectedOptionIndex: z.number().int().nonnegative().min(1),
+});
 
 const controller = {
   createContest: async (req: Request, res: Response) => {
@@ -249,6 +252,114 @@ const controller = {
         throw error;
       }
     } catch (error) {
+      return res.status(500).json({
+        success: false,
+        data: null,
+        error: "INTERNAL_SERVER_ERROR",
+      });
+    }
+  },
+  submitMcq: async (req: Request, res: Response) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          data: null,
+          error: "UNAUTHORIZED",
+        });
+      }
+
+      const parsedContestId = Number(req.params.contestId);
+      const parsedQuestionId = Number(req.params.questionId);
+
+      if (isNaN(parsedContestId)) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          error: "CONTEST_NOT_FOUND",
+        });
+      }
+
+      if (isNaN(parsedQuestionId)) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          error: "QUESTION_NOT_FOUND",
+        });
+      }
+
+      const validationResult = mcqSubmissionSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({
+          success: false,
+          data: null,
+          error: "INVALID_REQUEST",
+        });
+      }
+
+      const { selectedOptionIndex } = validationResult.data;
+
+      try {
+        const mcq = await prisma.mcqQuestions.findFirst({
+          where: {
+            contest_id: parsedContestId,
+            id: parsedQuestionId,
+          },
+          select: {
+            correct_option_index: true,
+            points: true,
+          },
+        });
+
+        if (!mcq) {
+          return res.status(404).json({
+            success: false,
+            data: null,
+            error: "QUESTION_NOT_FOUND",
+          });
+        }
+
+        const isCorrect = selectedOptionIndex === mcq.correct_option_index;
+        const pointsEarned = isCorrect ? mcq.points : 0;
+
+        await prisma.mcqSubmissions.create({
+          data: {
+            user_id: userId,
+            question_id: parsedQuestionId,
+            selected_option_index: selectedOptionIndex,
+            is_correct: isCorrect,
+            points_earned: pointsEarned,
+          },
+        });
+
+        return res.status(201).json({
+          success: true,
+          data: {
+            isCorrect,
+            pointsEarned,
+          },
+          error: null,
+        });
+      } catch (error: any) {
+        if (error.code === "P2002") {
+          return res.status(400).json({
+            success: false,
+            data: null,
+            error: "ALREADY_SUBMITTED",
+          });
+        }
+        if (error.code === "P2003") {
+          return res.status(404).json({
+            success: false,
+            data: null,
+            error: "QUESTION_NOT_FOUND",
+          });
+        }
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error in submitMcq:", error);
       return res.status(500).json({
         success: false,
         data: null,
