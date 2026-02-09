@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import z, { parse } from "zod";
+import z from "zod";
 import { prisma } from "../lib";
 
 const contestSchema = z.object({
