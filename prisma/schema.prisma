@@ -124,6 +124,6 @@ model DsaSubmissions {
   user              User       @relation(fields: [user_id], references: [id])
   problem           DsaProblems @relation(fields: [problem_id], references: [id])
 
-// Check for unique constraint
+  // Check for unique constraint
   @@map("dsa_submission")
 }

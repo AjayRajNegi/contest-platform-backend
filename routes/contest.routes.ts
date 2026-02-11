@@ -20,7 +20,7 @@ router.post(
   contestController.createMcq,
 );
 router.post(
-  ":contesId/mcq/:questionId/submit",
+  "/:contestId/mcq/:questionId/submit",
   authMiddleware,
   contesteeMiddleware,
   contestController.submitMcq,
@@ -30,6 +30,11 @@ router.post(
   authMiddleware,
   creatorMiddleware,
   contestController.createDSA,
+);
+router.get(
+  "/:contestId/leaderboard",
+  authMiddleware,
+  contestController.leaderboard,
 );
 
 export default router;

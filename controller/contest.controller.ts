@@ -25,7 +25,7 @@ const mcqQuestionSchema = z
     },
   );
 const mcqSubmissionSchema = z.object({
-  selectedOptionIndex: z.number().int().nonnegative().min(1),
+  selectedOptionIndex: z.number().int().nonnegative().min(0),
 });
 const dsaSubmissionSchema = z.object({
   title: z.string().min(1),
@@ -461,6 +461,122 @@ const controller = {
       }
     } catch (error) {
       console.error("Error in submitDSA:", error);
+      return res.status(500).json({
+        success: false,
+        data: null,
+        error: "INTERNAL_SERVER_ERROR",
+      });
+    }
+  },
+  leaderboard: async (req: Request, res: Response) => {
+    try {
+      const contestId = req.params.contestId;
+      const parsedContestId = Number(contestId);
+
+      if (isNaN(parsedContestId)) {
+        return res
+          .status(404)
+          .json({ success: false, data: null, error: "CONTEST_NOT_FOUND" });
+      }
+
+      const contestExists = await prisma.contests.findUnique({
+        where: {
+          id: parsedContestId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!contestExists) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          error: "CONTEST_NOT_FOUND",
+        });
+      }
+
+      const users = await prisma.user.findMany({
+        where: {
+          role: "contestee",
+          OR: [
+            {
+              mcqSubmissions: {
+                some: {
+                  question: {
+                    contest_id: parsedContestId,
+                  },
+                },
+              },
+            },
+            {
+              dsaSubmissions: {
+                some: {
+                  problem: {
+                    contest_id: parsedContestId,
+                  },
+                },
+              },
+            },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          mcqSubmissions: {
+            where: {
+              question: {
+                contest_id: parsedContestId,
+              },
+            },
+            select: {
+              points_earned: true,
+            },
+          },
+          dsaSubmissions: {
+            where: {
+              problem: {
+                contest_id: parsedContestId,
+              },
+            },
+            select: {
+              points_earned: true,
+            },
+          },
+        },
+      });
+
+      const leaderboard = users
+        .map((user) => {
+          const mcqPoints = user.mcqSubmissions.reduce(
+            (sum, sub) => sum + sub.points_earned,
+            0,
+          );
+
+          const dsaPoints = user.dsaSubmissions.reduce(
+            (sum, sub) => sum + sub.points_earned,
+            0,
+          );
+
+          return {
+            userId: user.id,
+            name: user.name,
+            totalPoints: mcqPoints + dsaPoints,
+          };
+        })
+        .sort((a, b) => b.totalPoints - a.totalPoints)
+        .map((user, index) => ({
+          ...user,
+          rank: index + 1,
+        }));
+
+      return res.json({
+        success: true,
+        data: leaderboard,
+        error: null,
+      });
+    } catch (error) {
+      console.error("Leaderboard error:", error);
       return res.status(500).json({
         success: false,
         data: null,
