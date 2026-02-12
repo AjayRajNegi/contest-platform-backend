@@ -2,6 +2,7 @@ import { response, type Request, type Response } from "express";
 import { prisma } from "../lib";
 import z from "zod";
 import { executeCode } from "../utils/CodeExecution";
+import { isContestActive } from "../utils/IsContestActive";
 
 const dsaSubmissionSchema = z.object({
   code: z.string().min(1),
@@ -118,6 +119,13 @@ const controller = {
       const problem = await prisma.dsaProblems.findUnique({
         where: { id: parsedProblemId },
         select: {
+          contest: {
+            select: {
+              creator_id: true,
+              start_time: true,
+              end_time: true,
+            },
+          },
           points: true,
           time_limit: true,
           memory_limit: true,
@@ -142,6 +150,19 @@ const controller = {
         });
       }
 
+      const isActive = isContestActive(
+        problem.contest.start_time,
+        problem.contest.end_time,
+      );
+
+      if (!isActive) {
+        return res.status(400).json({
+          success: false,
+          data: null,
+          error: "CONTEST_NOT_ACTIVE",
+        });
+      }
+
       if (problem.testCases.length === 0) {
         return res.status(500).json({
           success: false,
@@ -150,17 +171,27 @@ const controller = {
         });
       }
 
+      if (problem.contest.creator_id === userId) {
+        return res.status(403).json({
+          success: false,
+          data: null,
+          error: "FORBIDDEN",
+        });
+      }
+
       // Code Execution ============>
       const totalTestCases = problem.testCases.length;
       let testCasesPassed = 0;
       let executionTime = 0;
+      let finalStatus = "";
 
       let response = {
-        status: "",
+        status: finalStatus,
         pointsEarned: 0,
         testCasesPassed: 0,
         totalTestCases: 0,
       };
+
       for (const ele of problem.testCases) {
         const result = await executeCode(
           code,
@@ -170,16 +201,22 @@ const controller = {
           ele.expected_output,
         );
 
-        if (!result.error) {
+        console.log(result.res);
+        if (result.res === "runtime_error") {
+          finalStatus = "runtime_error";
+          break;
+        }
+        if (result.res === "wrong_answer") {
+          finalStatus = "wrong_answer";
+        } else {
           testCasesPassed++;
         }
-        response = {
-          ...response,
-          status: result.res,
-        };
-        if (result.executionTime) {
-          executionTime = result.executionTime;
-        }
+
+        executionTime = result.executionTime ?? executionTime;
+      }
+
+      if (testCasesPassed === totalTestCases) {
+        finalStatus = "accepted";
       }
 
       const pointsEarned = Math.floor(
@@ -187,14 +224,11 @@ const controller = {
       );
       response = {
         ...response,
+        status: finalStatus,
         pointsEarned,
         testCasesPassed,
         totalTestCases,
       };
-
-      if (testCasesPassed !== totalTestCases) {
-        response = { ...response, status: "wrong_answer" };
-      }
 
       const submission = await prisma.dsaSubmissions.upsert({
         where: {

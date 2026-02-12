@@ -3,14 +3,28 @@ import { writeFile, unlink } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 
+type ExecutionResult = {
+  res:
+    | "accepted"
+    | "wrong_answer"
+    | "runtime_error"
+    | "time_limit_exceeded"
+    | "memory_limit_exceeded";
+  error: string | null;
+  executionTime: number | null;
+};
+
 export async function executeCode(
   code: string,
   timeLimit: number,
   memoryLimit: number,
   input: string,
   expectedOutput: string,
-) {
-  const filename = `code_${Date.now()}_${Math.random().toString(36).substring(7)}.js`;
+): Promise<ExecutionResult> {
+  const filename = `code_${Date.now()}_${Math.random()
+    .toString(36)
+    .substring(7)}.js`;
+
   const filepath = join(tmpdir(), filename);
 
   try {
@@ -28,29 +42,29 @@ export async function executeCode(
 
     return {
       res: isCorrect ? "accepted" : "wrong_answer",
-      error: result.stderr || null,
+      error: null,
       executionTime: result.executionTime,
     };
   } catch (error: any) {
-    let errorType = "runtime_error";
+    let errorType: ExecutionResult["res"] = "runtime_error";
 
-    if (error.killed && error.signal === "SIGTERM") {
+    if (error.type === "TIMEOUT") {
       errorType = "time_limit_exceeded";
-    } else if (error.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") {
+    } else if (error.type === "MEMORY_LIMIT_EXCEEDED") {
+      errorType = "memory_limit_exceeded";
+    } else if (error.type === "RUNTIME_ERROR") {
       errorType = "runtime_error";
     }
 
     return {
       res: errorType,
-      error: errorType,
+      error: error.message || errorType,
       executionTime: null,
     };
   } finally {
     try {
       await unlink(filepath);
-    } catch (cleanupError) {
-      console.error("Failed to cleanup temp file:", cleanupError);
-    }
+    } catch {}
   }
 }
 
@@ -59,64 +73,91 @@ function executeWithInput(
   input: string,
   timeLimit: number,
   memoryLimit: number,
-): Promise<{ stdout: string; stderr: string; executionTime: number }> {
+): Promise<{ stdout: string; executionTime: number }> {
   return new Promise((resolve, reject) => {
-    const startTime = Date.now(); // Track start time
-    const child = spawn("node", [filepath], { timeout: timeLimit * 1000 });
+    const startTime = Date.now();
+    const child = spawn("node", [filepath]);
 
     let stdout = "";
     let stderr = "";
-    let memoryExceeded = false;
+    let finished = false;
+
+    const safeReject = (err: any) => {
+      if (!finished) {
+        finished = true;
+        reject(err);
+      }
+    };
+
+    const safeResolve = (val: any) => {
+      if (!finished) {
+        finished = true;
+        resolve(val);
+      }
+    };
 
     if (input) {
       child.stdin.write(input);
-      child.stdin.end();
-    } else {
-      child.stdin.end();
     }
+    child.stdin.end();
 
-    //Collect output
     child.stdout.on("data", (data) => {
       stdout += data.toString();
 
       if (stdout.length > memoryLimit) {
-        memoryExceeded = true;
         child.kill();
+        safeReject({
+          type: "MEMORY_LIMIT_EXCEEDED",
+          message: "Memory limit exceeded",
+        });
       }
     });
 
-    //Collect input
     child.stderr.on("data", (data) => {
       stderr += data.toString();
     });
 
-    //Handle timeout
     const timer = setTimeout(() => {
       child.kill();
-      reject({ type: "TIMEOUT", message: "Time limit exceeded" });
+      safeReject({
+        type: "TIMEOUT",
+        message: "Time limit exceeded",
+      });
     }, timeLimit * 1000);
 
-    //Handle completion
-    child.on("close", (code) => {
+    child.on("close", (code, signal) => {
       clearTimeout(timer);
-      const executionTime = Date.now() - startTime; // Calculate execution time
 
-      if (memoryExceeded) {
-        reject({ type: "MEMORY_EXCEEDED", message: "Memory limit exceeded" });
-      } else if (code !== 0 && code !== null) {
-        reject({
+      const executionTime = Date.now() - startTime;
+
+      if (finished) return;
+
+      if (signal) {
+        return safeReject({
           type: "RUNTIME_ERROR",
-          message: `Process exited with code ${code}`,
+          message: `Process killed by signal ${signal}`,
         });
-      } else {
-        resolve({ stdout, stderr, executionTime }); // Include executionTime
       }
+
+      if (code !== 0) {
+        return safeReject({
+          type: "RUNTIME_ERROR",
+          message: stderr || `Exited with code ${code}`,
+        });
+      }
+
+      safeResolve({
+        stdout,
+        executionTime,
+      });
     });
 
-    //Handle errors
-    child.on("error", (error) => {
+    child.on("error", (err) => {
       clearTimeout(timer);
-      reject({ type: "RUNTIME_ERROR", message: error.message });
+      safeReject({
+        type: "RUNTIME_ERROR",
+        message: err.message,
+      });
     });
   });
 }

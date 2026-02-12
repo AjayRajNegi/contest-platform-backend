@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import z from "zod";
 import { prisma } from "../lib";
+import { isContestActive } from "../utils/IsContestActive";
 
 const contestSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -326,6 +327,12 @@ const controller = {
           select: {
             correct_option_index: true,
             points: true,
+            contest: {
+              select: {
+                start_time: true,
+                end_time: true,
+              },
+            },
           },
         });
 
@@ -334,6 +341,18 @@ const controller = {
             success: false,
             data: null,
             error: "QUESTION_NOT_FOUND",
+          });
+        }
+
+        const isActive = isContestActive(
+          mcq.contest.start_time,
+          mcq.contest.end_time,
+        );
+        if (!isActive) {
+          return res.status(400).json({
+            success: false,
+            data: null,
+            error: "CONTEST_NOT_ACTIVE",
           });
         }
 
