@@ -1,6 +1,12 @@
-import type { Request, Response } from "express";
+import { response, type Request, type Response } from "express";
 import { prisma } from "../lib";
+import z from "zod";
+import { executeCode } from "../utils/CodeExecution";
 
+const dsaSubmissionSchema = z.object({
+  code: z.string().min(1),
+  language: z.string().min(1),
+});
 const controller = {
   getProblem: async (req: Request, res: Response) => {
     try {
@@ -70,6 +76,162 @@ const controller = {
     } catch (error) {
       console.error("Error fetching problem:", error);
       return res.status(500).json({
+        success: false,
+        data: null,
+        error: "INTERNAL_SERVER_ERROR",
+      });
+    }
+  },
+  submitProblem: async (req: Request, res: Response) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        return res.status(403).json({
+          success: false,
+          data: null,
+          error: "FORBIDDEN",
+        });
+      }
+      const problemId = req.params.problemId;
+      const parsedProblemId = Number(problemId);
+
+      if (isNaN(parsedProblemId)) {
+        return res.status(400).json({
+          success: false,
+          data: null,
+          error: "PROBLEM_NOT_FOUND",
+        });
+      }
+
+      const validationResult = dsaSubmissionSchema.safeParse(req.body);
+
+      if (!validationResult.success) {
+        return res.status(400).json({
+          success: false,
+          data: null,
+          error: "INVALID_REQUEST",
+        });
+      }
+
+      const { code, language } = validationResult.data;
+
+      const problem = await prisma.dsaProblems.findUnique({
+        where: { id: parsedProblemId },
+        select: {
+          points: true,
+          time_limit: true,
+          memory_limit: true,
+          testCases: {
+            where: {
+              problem_id: parsedProblemId,
+              is_hidden: false,
+            },
+            select: {
+              input: true,
+              expected_output: true,
+            },
+          },
+        },
+      });
+
+      if (!problem) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          error: "PROBLEM_NOT_FOUND",
+        });
+      }
+
+      if (problem.testCases.length === 0) {
+        return res.status(500).json({
+          success: false,
+          data: null,
+          error: "NO_TEST_CASES_AVAILABLE",
+        });
+      }
+
+      // Code Execution ============>
+      const totalTestCases = problem.testCases.length;
+      let testCasesPassed = 0;
+      let executionTime = 0;
+
+      let response = {
+        status: "",
+        pointsEarned: 0,
+        testCasesPassed: 0,
+        totalTestCases: 0,
+      };
+      for (const ele of problem.testCases) {
+        const result = await executeCode(
+          code,
+          problem.time_limit,
+          problem.memory_limit,
+          ele.input,
+          ele.expected_output,
+        );
+
+        if (!result.error) {
+          testCasesPassed++;
+        }
+        response = {
+          ...response,
+          status: result.res,
+        };
+        if (result.executionTime) {
+          executionTime = result.executionTime;
+        }
+      }
+
+      const pointsEarned = Math.floor(
+        (testCasesPassed / totalTestCases) * problem.points,
+      );
+      response = {
+        ...response,
+        pointsEarned,
+        testCasesPassed,
+        totalTestCases,
+      };
+
+      if (testCasesPassed !== totalTestCases) {
+        response = { ...response, status: "wrong_answer" };
+      }
+
+      const submission = await prisma.dsaSubmissions.upsert({
+        where: {
+          user_id_problem_id: {
+            user_id: userId,
+            problem_id: parsedProblemId,
+          },
+        },
+        update: {
+          code,
+          language,
+          status: response.status,
+          points_earned: pointsEarned,
+          test_cases_passed: testCasesPassed,
+          total_test_cases: totalTestCases,
+          execution_time: executionTime,
+        },
+        create: {
+          user_id: userId,
+          problem_id: parsedProblemId,
+          code,
+          language,
+          status: response.status,
+          points_earned: pointsEarned,
+          test_cases_passed: testCasesPassed,
+          total_test_cases: totalTestCases,
+          execution_time: executionTime,
+        },
+      });
+
+      return res.status(201).json({
+        success: true,
+        data: response,
+        error: null,
+      });
+    } catch (error) {
+      return res.json(500).json({
         success: false,
         data: null,
         error: "INTERNAL_SERVER_ERROR",

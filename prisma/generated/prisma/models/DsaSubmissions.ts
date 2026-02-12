@@ -310,6 +310,7 @@ export type DsaSubmissionsOrderByWithRelationInput = {
 
 export type DsaSubmissionsWhereUniqueInput = Prisma.AtLeast<{
   id?: number
+  user_id_problem_id?: Prisma.DsaSubmissionsUser_idProblem_idCompoundUniqueInput
   AND?: Prisma.DsaSubmissionsWhereInput | Prisma.DsaSubmissionsWhereInput[]
   OR?: Prisma.DsaSubmissionsWhereInput[]
   NOT?: Prisma.DsaSubmissionsWhereInput | Prisma.DsaSubmissionsWhereInput[]
@@ -325,7 +326,7 @@ export type DsaSubmissionsWhereUniqueInput = Prisma.AtLeast<{
   submitted_at?: Prisma.DateTimeFilter<"DsaSubmissions"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   problem?: Prisma.XOR<Prisma.DsaProblemsScalarRelationFilter, Prisma.DsaProblemsWhereInput>
-}, "id">
+}, "id" | "user_id_problem_id">
 
 export type DsaSubmissionsOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -464,6 +465,11 @@ export type DsaSubmissionsListRelationFilter = {
 
 export type DsaSubmissionsOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
+}
+
+export type DsaSubmissionsUser_idProblem_idCompoundUniqueInput = {
+  user_id: number
+  problem_id: number
 }
 
 export type DsaSubmissionsCountOrderByAggregateInput = {
